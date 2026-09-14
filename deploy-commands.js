@@ -1,39 +1,41 @@
 require('dotenv').config();
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 const comandos = require('./comandos.json');
-const MAX_COMMANDS = 100;
 
-// Convertimos el JSON en un formato que Discord entienda
-const entries = Object.entries(comandos);
-const commands = [];
+const token = process.env.TOKEN;
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
 
-for (const [nombre] of entries.slice(0, MAX_COMMANDS)) {
-    commands.push(
-        new SlashCommandBuilder()
-            .setName(nombre)
-            .setDescription(`Obtén el enlace para la guía/recurso de ${nombre}`)
-            .toJSON()
-    );
+if (!token || !clientId || !guildId) {
+    throw new Error('Faltan TOKEN, CLIENT_ID o GUILD_ID en las variables de entorno/Secrets de GitHub.');
 }
 
-if (entries.length > MAX_COMMANDS) {
-    console.warn(`Se encontraron ${entries.length} comandos en comandos.json, pero Discord solo permite ${MAX_COMMANDS}. Se registrarán solo los primeros ${MAX_COMMANDS}.`);
+const commands = Object.keys(comandos).map(nombre =>
+    new SlashCommandBuilder()
+        .setName(nombre.toLowerCase())
+        .setDescription(`Obtén el enlace para la guía/recurso de ${nombre}`.slice(0, 100))
+        .toJSON()
+);
+
+if (commands.length > 100) {
+    throw new Error(`Discord permite un máximo de 100 comandos slash por servidor. Hay ${commands.length}.`);
 }
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {
     try {
-        console.log(`Iniciando actualización de ${commands.length} comandos (/) de la aplicación.`);
+        console.log(`Registrando ${commands.length} comandos en el servidor ${guildId}...`);
 
-        // Subimos todos los comandos a Discord de golpe
         const data = await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
+            Routes.applicationGuildCommands(clientId, guildId),
             { body: commands },
         );
 
-        console.log(`¡Éxito! Se han recargado ${data.length} comandos correctamente.`);
+        console.log(`✅ ${data.length} comandos registrados correctamente.`);
+        console.log('Comandos:', data.map(command => `/${command.name}`).join(', '));
     } catch (error) {
-        console.error(error);
+        console.error('❌ Error registrando comandos:', error);
+        process.exitCode = 1;
     }
 })();
