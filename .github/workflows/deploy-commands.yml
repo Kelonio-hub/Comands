@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - master
     paths:
       - 'comandos.json'
       - 'deploy-commands.js'
@@ -13,24 +14,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-commands:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
+      - name: Configurar Node.js 24
+        uses: actions/setup-node@v5
         with:
           node-version: 24
 
       - name: Instalar dependencias
         run: npm install
 
-      - name: Registrar comandos en Discord
+      - name: Registrar comandos de Discord
         env:
-          TOKEN: ${{ secrets.DISCORD_TOKEN }}
-          CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-          GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          TOKEN: ${{ secrets.TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
         run: node deploy-commands.js
